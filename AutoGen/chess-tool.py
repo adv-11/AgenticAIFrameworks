@@ -1,4 +1,5 @@
 import os
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -112,9 +113,10 @@ board = chess.Board()
 
 #initiating the chat between the players
 
-
-chat_result = player_white.initiate_chat(
-    player_black,
-    message=' Lets play Chess! Your move : ',
-    max_turns= 5,
-)
+for _ in range(5):
+    chat_result = player_white.initiate_chat(
+        player_black,
+        message=' Lets play Chess! Your move : ',
+        max_turns= 1,
+    )
+    time.sleep(5)  # Add delay to avoid rate limit
