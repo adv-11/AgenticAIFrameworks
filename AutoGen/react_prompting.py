@@ -1,10 +1,10 @@
 import os 
 from typing import Annotated
-
+from dotenv import load_dotenv
+load_dotenv()
 from tavily import TavilyClient
-import chromadb
 from autogen import AssistantAgent, UserProxyAgent, config_list_from_json, register_function
-from autogen.agentchat.contrib.capabilities import teachability
+# from autogen.agentchat.contrib.capabilities import teachability
 from autogen.cache import Cache
 from autogen.coding import LocalCommandLineCodeExecutor
 
@@ -13,10 +13,12 @@ config_list = [
     {"model": "codestral-latest", "api_key": os.environ.get("MISTRAL_API_KEY"), "api_type": "mistral"}
 ]
 
-tavily = TavilyClient (api_key=os.environ.get("TAVILY_API_KEY")) 
+TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY")
 
-def search_tool (query : Annotated[str , "The Search query"]) -> Annotated[str , 'The Search results'] :
-    return tavily.get_search_contextt (query , search_depth = ' advanced')
+tavily = TavilyClient (api_key=TAVILY_API_KEY) 
+
+def search_tool (query : Annotated[str , "The search query"]) -> Annotated[str , 'The Search results'] :
+    return tavily.get_search_context (query , search_depth='advanced')
 
 #react prompt 
 
