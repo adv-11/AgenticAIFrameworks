@@ -43,6 +43,7 @@ user_proxy = UserProxyAgent(
     "user_proxy",
     code_execution_config={"work_dir": "coding", "use_docker": False},
     human_input_mode="NEVER",
+    is_termination_msg= lambda msg: "FINISH" in msg.get("content"),
     
 )
 

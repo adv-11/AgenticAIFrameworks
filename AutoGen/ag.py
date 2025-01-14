@@ -34,7 +34,8 @@ IMPORTANT: Wait for the user to execute your code and then you can reply with th
 assistant = AssistantAgent(
     name = "mistral assistant", 
     llm_config= {"config_list": llm_config}, 
-    system_message= system_message
+    system_message= system_message,
+    
     )
 
 
