@@ -8,7 +8,8 @@ from autogen.cache import Cache
 from autogen.coding import LocalCommandLineCodeExecutor
 
 config_list = [
-    {"model": "gemini-1.5-flash", "api_key": os.environ.get("GOOGLE_API_KEY"), "api_type": "google"},
+    {"model": "gpt-4", "api_key": os.environ.get("OPENAI_API_KEY")},
+    # {"model": "gemini-1.5-flash", "api_key": os.environ.get("GOOGLE_API_KEY"), "api_type": "google"},
 #     {"model": "codestral-latest", "api_key": os.environ.get("MISTRAL_API_KEY"), "api_type": "mistral"}
 ]
 
