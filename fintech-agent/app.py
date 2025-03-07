@@ -76,3 +76,35 @@ model.fit(X_train, y_train)
 accuracy = model.score(X_test, y_test)
 print(f"Model accuracy: {accuracy:.2f}")  # 0.84
 joblib.dump(model, 'loan_approval_model.pkl')
+
+
+class PredictiveMLTool:
+    def __init__(self):
+        self.model = joblib.load('loan_approval_model.pkl')
+    
+    def use(self, intent, age, income, loan_amount):
+        input_data = pd.DataFrame(
+            [[age, income, loan_amount, intent]],
+            columns=['person_age', 'person_income', 'loan_amnt', 'loan_intent']
+        )
+        prob_approved = self.model.predict_proba(input_data)[0][0]
+        print(f"Probability for the loan approval is: {prob_approved}")
+        return "Eligible" if prob_approved > 0.5 else "Not Eligible"
+
+class LoanAgent:
+    def __init__(self):
+        self.tools = [PredictiveMLTool()]
+        self.llm = llm
+    
+    def process(self, query, params):
+        intent = self.extract_intent(query)
+        age = params.get('age')
+        income = params.get('income')
+        loan_amount = params.get('loan_amount')
+        return self.tools[0].use(intent, age, income, loan_amount)
+    
+    def extract_intent(self, query):
+        valid_intents = ['DEBTCONSOLIDATION', 'EDUCATION', 'HOMEIMPROVEMENT', 'MEDICAL', 'PERSONAL', 'VENTURE']
+        prompt = f"Given the query: '{query}', classify the intent into one of: {', '.join(valid_intents)}. Respond with only the intent in uppercase (e.g., 'HOMEIMPROVEMENT'). If unsure, respond with 'PERSONAL'."
+        response = self.llm(prompt)[0]['generated_text'].strip().upper()
+        return response if response in valid_intents else 'PERSONAL'
