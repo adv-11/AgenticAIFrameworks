@@ -108,3 +108,10 @@ class LoanAgent:
         prompt = f"Given the query: '{query}', classify the intent into one of: {', '.join(valid_intents)}. Respond with only the intent in uppercase (e.g., 'HOMEIMPROVEMENT'). If unsure, respond with 'PERSONAL'."
         response = self.llm(prompt)[0]['generated_text'].strip().upper()
         return response if response in valid_intents else 'PERSONAL'
+    
+class KernelAgent:
+    def __init__(self, loan_agent):
+        self.loan_agent = loan_agent
+    
+    def process_query(self, query, params):
+        return self.loan_agent.process(query, params)
