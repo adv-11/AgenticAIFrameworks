@@ -7,7 +7,9 @@ from mistralai import Mistral
 import os
 from abc import ABC, abstractmethod
 from typing import Any
-
+import random
+import csv
+from mistralai import Mistral
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
@@ -115,3 +117,32 @@ class KernelAgent:
     
     def process_query(self, query, params):
         return self.loan_agent.process(query, params)
+    
+
+
+
+# insurance agent 
+
+base_prompt = "Generate a detailed query for an auto insurance claim..."
+def generate_query(denied=False):
+    prompt = base_prompt
+    if denied:
+        prompt += " Include a reason the claim might be denied (e.g., drunk driving, uninsured vehicle)."
+    response = client.chat.complete(model=model, messages=[{"role": "user", "content": prompt}], max_tokens=200)
+    return response.choices[0].message.content.strip()
+
+def assign_target(query):
+    rejection_keywords = ["drunk", "influence", "racing", "uninsured"]
+    return 0 if any(kw in query.lower() for kw in rejection_keywords) else 1
+
+dataset = []
+for i in range(100):
+    denied = random.random() < 0.4
+    query = generate_query(denied)
+    target = assign_target(query) if not denied else 0
+    dataset.append({"query": query, "target": target})
+
+with open("auto_insurance_claims.csv", "w", newline="") as f:
+    writer = csv.DictWriter(f, fieldnames=["query", "target"])
+    writer.writeheader()
+    writer.writerows(dataset)
