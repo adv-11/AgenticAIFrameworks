@@ -146,3 +146,19 @@ with open("auto_insurance_claims.csv", "w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=["query", "target"])
     writer.writeheader()
     writer.writerows(dataset)
+
+
+
+df = pd.read_csv('auto_insurance_claims.csv')
+embeddings = embedder.encode(df['query'].tolist())
+embeddings_list = [embedding.tolist() for embedding in embeddings]
+
+schema = pa.schema([
+    pa.field("embedding", pa.list_(pa.float32(), list_size=384)),
+    pa.field("target", pa.int32()),
+    pa.field("query", pa.string())
+])
+
+table = db.create_table("insurance_queries", schema=schema)
+df_lance = pd.DataFrame({"embedding": embeddings_list, "target": df['target'], "query": df['query']})
+table.add(df_lance)
