@@ -96,7 +96,7 @@ class PredictiveMLTool:
 class LoanAgent:
     def __init__(self):
         self.tools = [PredictiveMLTool()]
-        self.llm = llm
+        self.model = model
     
     def process(self, query, params):
         intent = self.extract_intent(query)
@@ -230,6 +230,11 @@ class KernelAgent:
             return self.insurance_agent.process(query)
         else:
             return "Error: Unable to classify query as 'loan' or 'insurance'."
+        
+
+loan_agent = LoanAgent(client, model)
+insurance_agent = InsuranceAgent(table)
+kernel_agent = KernelAgent(loan_agent, insurance_agent)
 
 
 test_cases = [
