@@ -16,7 +16,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 import pandas as pd
-
+import random
+import csv
+import joblib
 
 """### LLM and Embedding Model Customization
 """
@@ -96,7 +98,9 @@ model_pipeline.fit(X_train, y_train)
 accuracy = model_pipeline.score(X_test, y_test)
 print(f"Model accuracy: {accuracy:.2f}")
 
-import joblib
+
+
+
 
 # Save the trained model
 joblib.dump(model_pipeline, "loan_approval_model.pkl")
@@ -222,13 +226,9 @@ for case in test_cases:
 
 """### Generating the Demo Insurance Claim dataset
 
-Before diving in, I want to walk you through my thought process for creating the Insurance Agent. Picture this: you walk into an insurance company, sit down with someone, and start explaining why you need to file a claim—why it’s legit and why you deserve it. That conversation is key because it’s the starting point for deciding whether the claim gets processed or not.
-
-I tried hunting down a dataset with those kinds of conversations and clear yes or no labels for claims, but I came up empty. So, to keep things moving, I built a simple synthetic dataset pipeline. It generates a fake dataset with text queries on one side and a target on the other—showing if the person filing the claim is eligible or not.
 """
 
-import random
-import csv
+
 
 # Define base prompt for insurance claims
 base_prompt = """
@@ -278,9 +278,6 @@ print("Dataset saved to 'auto_insurance_claims.csv'")
 
 """### Inserting Demo Insurance Queries into LanceDB
 
-The demo insurance queries are added to LanceDB to serve as a foundation for future operations, enabling semantic search capabilities across the existing query dataset. When a new query is introduced, it will be embedded once more, allowing the system to leverage hybrid search techniques to effectively explore and match it against the pre-existing database, ensuring accurate and efficient retrieval of relevant information.
-
-This can become a go-to for the fintech comapaines where they can plug in their own Insurance Conversations logs and do the semantic search on the new embeded queries to retrive the eligibility for the claim.
 """
 
 # Load insurance dataset
