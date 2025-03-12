@@ -193,3 +193,40 @@ class InsuranceAgent:
 
     def process(self, query):
         return self.tools[0].use(query)
+    
+# KERNEL AGENT
+
+
+# Kernel Agent
+class KernelAgent:
+    def __init__(self, loan_agent, insurance_agent):
+        self.loan_agent = loan_agent
+        self.insurance_agent = insurance_agent
+        self.client = client
+        self.model = model
+
+    def classify_query(self, query):
+        prompt = f"""
+        Given the query: '{query}', classify it as 'loan' or 'insurance'.
+        Respond with only 'loan' or 'insurance'.
+        If unsure, respond with 'unknown'.
+        """
+        response = self.client.chat.complete(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=10
+        )
+        print(f"Query type : {response.choices[0].message.content.strip().lower()}")
+        return response.choices[0].message.content.strip().lower()
+
+    def process_query(self, query, params=None):
+        query_type = self.classify_query(query)
+        if query_type == 'loan':
+            if not params:
+                return "Error: Loan query requires parameters (age, income, loan_amount)."
+            return self.loan_agent.process(query, params)
+        elif query_type == 'insurance':
+            return self.insurance_agent.process(query)
+        else:
+            return "Error: Unable to classify query as 'loan' or 'insurance'."
