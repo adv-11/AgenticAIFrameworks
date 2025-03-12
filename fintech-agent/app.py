@@ -230,3 +230,30 @@ class KernelAgent:
             return self.insurance_agent.process(query)
         else:
             return "Error: Unable to classify query as 'loan' or 'insurance'."
+
+
+test_cases = [
+    {
+        "query": "I had a bad accident yesterday, but i think i was a bit drunk, need some insurance",
+        "params": None
+    },
+]
+
+# Run Tests
+print("Testing Integrated System with Mistral:")
+print("-" * 50)
+for case in test_cases:
+    query = case["query"]
+    params = case.get("params")
+    result = kernel_agent.process_query(query, params)
+    print(f"Query: '{query}'")
+    if params:
+        print(f"Params: {params}")
+    if isinstance(result, dict):
+        print(f"Decision: {result['decision']}")
+        print("Similar Queries:")
+        for q in result['similar_queries']:
+            print(f"- {q}")
+    else:
+        print(f"Result: {result}")
+    print("-" * 50)
