@@ -162,3 +162,34 @@ schema = pa.schema([
 table = db.create_table("insurance_queries", schema=schema)
 df_lance = pd.DataFrame({"embedding": embeddings_list, "target": df['target'], "query": df['query']})
 table.add(df_lance)
+
+# INSURANCE AGENT TOOLS 
+
+
+class SemanticSearchTool(Tool):
+    def __init__(self, table):
+        self.table = table
+        self.embedder = embedder
+
+    def name(self):
+        return "Semantic Search Tool"
+
+    def description(self):
+        return "Performs semantic search in LanceDB to assess claim approval based on similar past claims."
+
+    def use(self, query, k=5):
+        new_embedding = self.embedder.encode([query])[0].tolist()
+        results = self.table.search(new_embedding).limit(k).to_pandas()
+        approval_rate = results['target'].mean()
+        similar_queries = results['query'].tolist()
+        decision = "Approved" if approval_rate > 0.5 else "Not Approved"
+        print(f"Approval rate among similar claims: {approval_rate*100:.1f}%")
+        return {"decision": decision, "similar_queries": similar_queries}
+
+# Insurance Agent
+class InsuranceAgent:
+    def __init__(self, table):
+        self.tools = [SemanticSearchTool(table)]
+
+    def process(self, query):
+        return self.tools[0].use(query)
