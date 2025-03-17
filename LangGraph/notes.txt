@@ -1,0 +1,7 @@
+Long term memory with langGraph 
+
+Semantic Memory: Stores core facts and user preferences (e.g., “User prefers dark mode” or “Alice works in marketing”). This knowledge forms a persistent base that the AI can reference during interactions.
+
+Episodic Memory: Captures complete experiences, including the context and reasoning behind an interaction. Think of it as a diary where the agent notes “what happened” and “how it was resolved.”
+
+Procedural Memory: Encodes behavioral patterns and evolving instructions. It’s like the agent’s operating manual that gets refined as it learns from feedback.
