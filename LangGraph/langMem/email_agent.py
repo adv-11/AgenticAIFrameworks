@@ -6,6 +6,8 @@ from typing_extensions import TypedDict, Literal, Annotated
 from langchain.chat_models import init_chat_model
 from prompts import triage_system_prompt, triage_user_prompt
 
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") 
+
 profile = {
     "name": "John",
     "full_name": "John Doe",
