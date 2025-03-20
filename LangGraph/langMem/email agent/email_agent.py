@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypedDict, Literal, Annotated
 from langchain.chat_models import init_chat_model
 from prompts import triage_system_prompt, triage_user_prompt
+from langchain_core.tools import tool
+
 
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") 
 
@@ -61,8 +63,8 @@ class Router(BaseModel):
 llm_router = llm.with_structured_output(Router)
 
 
-print(triage_system_prompt)
-print(triage_user_prompt)
+print('\n Triage  System  Prompt' , triage_system_prompt)
+print('\n Triage   User  Prompt' , triage_user_prompt)
 
 system_prompt = triage_system_prompt.format(
     full_name=profile["full_name"],
@@ -88,4 +90,51 @@ result = llm_router.invoke(
     ]
 )
 
-print (result)
+print ('\nResult : ', result)
+
+
+@tool
+def write_email(to: str, subject: str, content: str) -> str:
+    """Write and send an email."""
+    # Placeholder response - in real app would send email
+    return f"Email sent to {to} with subject '{subject}'"
+
+@tool
+def schedule_meeting(
+    attendees: list[str], 
+    subject: str, 
+    duration_minutes: int, 
+    preferred_day: str
+) -> str:
+    """Schedule a calendar meeting."""
+    # Placeholder response - in real app would check calendar and schedule
+    return f"Meeting '{subject}' scheduled for {preferred_day} with {len(attendees)} attendees"
+
+
+
+@tool
+def check_calendar_availability(day: str) -> str:
+    """Check calendar availability for a given day."""
+    # Placeholder response - in real app would check actual calendar
+    return f"Available times on {day}: 9:00 AM, 2:00 PM, 4:00 PM"
+
+
+from prompts import agent_system_prompt
+def create_prompt(state):
+    return [
+        {
+            "role": "system", 
+            "content": agent_system_prompt.format(
+                instructions=prompt_instructions["agent_instructions"],
+                **profile
+                )
+        }
+    ] + state['messages']
+
+
+print ('\nAgent System Prompt : ', agent_system_prompt)
+
+
+
+
+
