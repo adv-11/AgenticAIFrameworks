@@ -6,7 +6,7 @@ from typing_extensions import TypedDict, Literal, Annotated
 from langchain.chat_models import init_chat_model
 from prompts import triage_system_prompt, triage_user_prompt
 from langchain_core.tools import tool
-
+from langgraph.prebuilt import create_react_agent
 
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") 
 
@@ -138,3 +138,164 @@ print ('\nAgent System Prompt : ', agent_system_prompt)
 
 
 
+# Langgraph agent 
+
+tools=[write_email, schedule_meeting, check_calendar_availability]
+
+agent = create_react_agent(
+    "openai:gpt-4o",
+    tools=tools,
+    prompt=create_prompt,
+)
+
+
+response = agent.invoke(
+    {"messages": [{
+        "role": "user", 
+        "content": "what is my availability for tuesday?"
+    }]}
+)
+
+response["messages"][-1].pretty_print()
+
+
+# Overall Agent
+
+
+from langgraph.graph import add_messages
+from langgraph.graph import StateGraph, START, END
+from langgraph.types import Command
+from typing import Literal
+from IPython.display import Image, display
+
+class State(TypedDict):
+    email_input: dict
+    messages: Annotated[list, add_messages]
+
+
+
+def triage_router(state: State) -> Command[
+    Literal["response_agent", "__end__"]
+]:
+    author = state['email_input']['author']
+    to = state['email_input']['to']
+    subject = state['email_input']['subject']
+    email_thread = state['email_input']['email_thread']
+
+    system_prompt = triage_system_prompt.format(
+        full_name=profile["full_name"],
+        name=profile["name"],
+        user_profile_background=profile["user_profile_background"],
+        triage_no=prompt_instructions["triage_rules"]["ignore"],
+        triage_notify=prompt_instructions["triage_rules"]["notify"],
+        triage_email=prompt_instructions["triage_rules"]["respond"],
+        examples=None
+    )
+    user_prompt = triage_user_prompt.format(
+        author=author, 
+        to=to, 
+        subject=subject, 
+        email_thread=email_thread
+    )
+    result = llm_router.invoke(
+        [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+    )
+    if result.classification == "respond":
+        print("📧 Classification: RESPOND - This email requires a response")
+        goto = "response_agent"
+        update = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Respond to the email {state['email_input']}",
+                }
+            ]
+        }
+    elif result.classification == "ignore":
+        print("🚫 Classification: IGNORE - This email can be safely ignored")
+        update = None
+        goto = END
+    elif result.classification == "notify":
+        # If real life, this would do something else
+        print("🔔 Classification: NOTIFY - This email contains important information")
+        update = None
+        goto = END
+    else:
+        raise ValueError(f"Invalid classification: {result.classification}")
+    return Command(goto=goto, update=update)
+
+
+
+email_agent = StateGraph(State)
+email_agent = email_agent.add_node(triage_router)
+email_agent = email_agent.add_node("response_agent", agent)
+email_agent = email_agent.add_edge(START, "triage_router")
+email_agent = email_agent.compile()
+
+
+# Show the agent
+display(Image(email_agent.get_graph(xray=True).draw_mermaid_png()))
+
+
+email_input = {
+    "author": "Marketing Team <marketing@amazingdeals.com>",
+    "to": "John Doe <john.doe@company.com>",
+    "subject": "🔥 EXCLUSIVE OFFER: Limited Time Discount on Developer Tools! 🔥",
+    "email_thread": """Dear Valued Developer,
+
+Don't miss out on this INCREDIBLE opportunity! 
+
+🚀 For a LIMITED TIME ONLY, get 80% OFF on our Premium Developer Suite! 
+
+✨ FEATURES:
+- Revolutionary AI-powered code completion
+- Cloud-based development environment
+- 24/7 customer support
+- And much more!
+
+💰 Regular Price: $999/month
+🎉 YOUR SPECIAL PRICE: Just $199/month!
+
+🕒 Hurry! This offer expires in:
+24 HOURS ONLY!
+
+Click here to claim your discount: https://amazingdeals.com/special-offer
+
+Best regards,
+Marketing Team
+---
+To unsubscribe, click here
+""",
+}
+
+response = email_agent.invoke({"email_input": email_input})
+
+print (' Spam response : ' , response)
+
+
+email_input = {
+    "author": "Alice Smith <alice.smith@company.com>",
+    "to": "John Doe <john.doe@company.com>",
+    "subject": "Quick question about API documentation",
+    "email_thread": """Hi John,
+
+I was reviewing the API documentation for the new authentication service and noticed a few endpoints seem to be missing from the specs. Could you help clarify if this was intentional or if we should update the docs?
+
+Specifically, I'm looking at:
+- /auth/refresh
+- /auth/validate
+
+Thanks!
+Alice""",
+}
+
+response = email_agent.invoke({"email_input": email_input})
+
+print ( ' Respond email example : ' , response)
+
+
+for m in response["messages"]:
+    m.pretty_print()
