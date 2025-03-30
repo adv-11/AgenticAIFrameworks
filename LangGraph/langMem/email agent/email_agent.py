@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-_ = load_dotenv()
+load_dotenv()
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict, Literal, Annotated
 from langchain.chat_models import init_chat_model
@@ -8,7 +8,7 @@ from prompts import triage_system_prompt, triage_user_prompt
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY") 
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY_TBH") 
 
 profile = {
     "name": "John",
@@ -109,7 +109,6 @@ def schedule_meeting(
     """Schedule a calendar meeting."""
     # Placeholder response - in real app would check calendar and schedule
     return f"Meeting '{subject}' scheduled for {preferred_day} with {len(attendees)} attendees"
-
 
 
 @tool
@@ -297,5 +296,3 @@ response = email_agent.invoke({"email_input": email_input})
 print ( ' Respond email example : ' , response)
 
 
-for m in response["messages"]:
-    m.pretty_print()
