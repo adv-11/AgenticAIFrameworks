@@ -208,3 +208,7 @@ def chat_loop():
             print("\n")
         except Exception as e:
             print(f"\nError: {str(e)}")
+
+
+if __name__ == "__main__":
+    chat_loop()
