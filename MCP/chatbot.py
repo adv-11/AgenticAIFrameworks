@@ -95,3 +95,43 @@ def extract_info(paper_id: str) -> str:
                     continue
     
     return f"There's no saved information related to paper {paper_id}."
+
+
+print(extract_info('1310.7911v2'))
+
+
+tools = [
+    {
+        "name": "search_papers",
+        "description": "Search for papers on arXiv based on a topic and store their information.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "topic": {
+                    "type": "string",
+                    "description": "The topic to search for"
+                }, 
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum number of results to retrieve",
+                    "default": 5
+                }
+            },
+            "required": ["topic"]
+        }
+    },
+    {
+        "name": "extract_info",
+        "description": "Search for information about a specific paper across all topic directories.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "paper_id": {
+                    "type": "string",
+                    "description": "The ID of the paper to look for"
+                }
+            },
+            "required": ["paper_id"]
+        }
+    }
+]
