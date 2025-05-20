@@ -1,4 +1,4 @@
-%%writefile mcp_project/research_server.py
+# %%writefile mcp_project/research_server.py
 
 import arxiv
 import json
@@ -104,3 +104,11 @@ def extract_info(paper_id: str) -> str:
 if __name__ == "__main__":
     # Initialize and run the server
     mcp.run(transport='stdio')
+
+
+# start a new terminal
+import os
+from IPython.display import IFrame
+
+IFrame(f"{os.environ.get('DLAI_LOCAL_URL').format(port=8888)}terminals/1", 
+       width=600, height=768)
