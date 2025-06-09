@@ -80,3 +80,63 @@ def process_documents(uploaded_files, rebuild=False):
 
     return len(texts)
 
+def get_existing_documents():
+    try:
+        vectorstore = get_vectorstore()
+        # Retrieve all documents
+        results = vectorstore.get()
+        # Extract unique source names from the results
+        documents = list(set(metadata['source'] for metadata in results['metadatas']))
+
+        # Persist the vectorstore
+        vectorstore.persist()
+
+        return documents
+    except Exception as e:
+        logging.error(f"Error retrieving existing documents: {e}")
+        return []
+
+def clear_vectorstore():
+    if os.path.exists("./chroma_db"):
+        shutil.rmtree("./chroma_db")
+        logger.info("Cleared Chroma vectorstore.")
+        get_vectorstore.clear()
+
+    for file in os.listdir(DOCUMENTS_DIR):
+        file_path = os.path.join(DOCUMENTS_DIR, file)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+
+    logger.info("Cleared documents directory.")
+    return True
+
+def remove_document(document_name):
+    try:
+        vectorstore = get_vectorstore()
+
+        # Check if the document file exists
+        document_path = os.path.join(DOCUMENTS_DIR, document_name)
+        if os.path.exists(document_path):
+            # Remove the document file
+            os.remove(document_path)
+            logging.info(f"Removed file: {document_path}")
+        else:
+            logging.warning(f"Document file not found: {document_path}")
+
+        # Get the ids of the documents to delete from vectorstore
+        results = vectorstore.get(where={"source": document_name})
+        if results and results['ids']:
+            # Delete the documents from vectorstore
+            vectorstore.delete(ids=results['ids'])
+            logging.info(f"Removed {len(results['ids'])} embeddings for document: {document_name}")
+
+            # Persist the changes
+            vectorstore.persist()
+
+            return True
+        else:
+            logging.warning(f"No embeddings found in vectorstore for document: {document_name}")
+            return False
+    except Exception as e:
+        logging.error(f"Error removing document {document_name}: {e}")
+        return False
