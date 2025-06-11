@@ -261,3 +261,191 @@ body {
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+from app.document_processor import process_documents, get_existing_documents, clear_vectorstore, get_embedding_function, remove_document
+from app.model_handler import ModelHandler
+from app.rag import retrieve_context
+from app.utils import load_config
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Load configuration
+config = load_config()
+
+@st.cache_resource
+def get_model_handler():
+    model_handler = ModelHandler(config)
+    # st.write(f"Available models: {model_handler.available_models}")  # Debug info
+    return model_handler
+
+def load_models():
+    with st.spinner("Loading models... This may take a few minutes."):
+        model_handler = get_model_handler()
+
+        if not model_handler.available_models:
+            st.error("No models are available. Please check your configuration and model files.")
+        else:
+            # st.write(f"Debug: Available models: {model_handler.available_models}")  # More debug info
+            alert = st.success(f"Models loaded successfully! Available models: {', '.join(model_handler.available_models)}")
+            time.sleep(2)
+            alert.empty()
+
+def main():
+    # Custom CSS for responsive layout
+    st.markdown("""
+    <style>
+    .header-container {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .logo-container {
+        width: 60px;
+        margin-right: 20px;
+    }
+    .title-container {
+        flex-grow: 1;
+    }
+    .title-container h1 {
+        margin: 0;
+        padding: 0;
+        font-size: 2.5rem;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    @media (max-width: 768px) {
+        .title-container h1 {
+            font-size: 1.8rem;
+        }
+        .logo-container {
+            width: 40px;
+            margin-right: 10px;
+        }
+    }
+    .stColumns {
+        gap: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Create a container for the header
+    header = st.container()
+    with header:
+        st.markdown("""
+        <div class="header-container">
+            <div class="logo-container">
+                <img src="data:image/png;base64,{}" width="100%">
+            </div>
+            <div class="title-container">
+                <h1>Airgapped Offline RAG</h1>
+            </div>
+        </div>
+        """.format(get_base64_of_image("assets/airgapped_offline_rag_icon.png")), unsafe_allow_html=True)
+
+    # Expanded blurb
+    st.markdown("""
+    An offline RAG (Retrieval-Augmented Generation) system for document analysis and Q&A.
+    This tool allows you to process and query your documents locally, without relying on external APIs or internet connection.
+    Perfect for handling sensitive information or working in air-gapped environments.
+    """)
+
+    # Initialize session state variables
+    if 'models_loaded' not in st.session_state:
+        st.session_state.models_loaded = False
+    if 'chat_enabled' not in st.session_state:
+        st.session_state.chat_enabled = False
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    if 'use_rag' not in st.session_state:
+        st.session_state.use_rag = True
+    if 'debug_mode' not in st.session_state:
+        st.session_state.debug_mode = False
+
+    if not st.session_state.models_loaded:
+        load_models()
+        st.session_state.models_loaded = True
+
+    # Use st.columns with equal width for settings and chat
+    col1, col2 = st.columns(2)
+
+    with col1:
+        with st.container():
+            st.markdown('<div class="settings-column">', unsafe_allow_html=True)
+            settings_section()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        with st.container():
+            st.markdown('<div class="chat-column">', unsafe_allow_html=True)
+            chat_interface()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # Footer
+    st.markdown(
+        """
+        <div class="footer">
+            © 2023-2024 Airgaped Offline Local Document RAG by <a href="https://x.com/vincent_koc" target="_blank">Vincent Koc</a> |
+            <a href="https://github.com/vincentkoc/airgapped-offfline-rag" target="_blank">
+                Open Source on GitHub <img src="https://github.com/fluidicon.png" class="github-icon">
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+def settings_section():
+    with st.container():
+        st.subheader("Settings")
+
+        uploaded_files = st.file_uploader("Upload PDF documents", accept_multiple_files=True, type=['pdf'])
+
+        existing_docs = get_existing_documents()
+        if existing_docs:
+            st.write("Existing documents:")
+            with st.container():
+                for doc in existing_docs:
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.markdown(f"<p>- {doc}</p>", unsafe_allow_html=True)
+                    with col2:
+                        if st.button(f"Remove", key=f"remove_{doc}"):
+                            if remove_document(doc):
+                                st.success(f"Removed {doc}")
+                                st.experimental_rerun()
+                            else:
+                                st.error(f"Failed to remove {doc}")
+        else:
+            st.write("No existing documents found.")
+
+        model_handler = get_model_handler()
+        if model_handler.available_models:
+            model_choice = st.selectbox("Choose a model", model_handler.available_models)
+            st.session_state.model_choice = model_choice
+        else:
+            st.error("No models available. Please check your configuration and model files.")
+            return
+
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            st.session_state.debug_mode = st.checkbox("Debug")
+        with col2:
+            st.session_state.use_rag = st.checkbox("Use RAG", value=True)
+        with col3:
+            if st.button("Process"):
+                if uploaded_files or existing_docs:
+                    process_and_enable_chat(uploaded_files)
+                elif st.session_state.use_rag:
+                    st.warning("No documents found. Please upload documents to use RAG or disable RAG.")
+                else:
+                    st.success("Chat enabled without RAG.")
+                    st.session_state.chat_enabled = True
+
+        if 'processing_result' in st.session_state:
+            st.markdown(st.session_state.processing_result, unsafe_allow_html=True)
+            if st.session_state.debug_mode and 'processing_logs' in st.session_state:
+                with st.expander("Processing Logs"):
+                    st.markdown(f'<div class="processing-logs">{st.session_state.processing_logs}</div>', unsafe_allow_html=True)
+
