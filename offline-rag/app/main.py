@@ -449,3 +449,140 @@ def settings_section():
                 with st.expander("Processing Logs"):
                     st.markdown(f'<div class="processing-logs">{st.session_state.processing_logs}</div>', unsafe_allow_html=True)
 
+def process_and_enable_chat(uploaded_files):
+    with st.spinner("Processing documents..."):
+        try:
+            log_capture = io.StringIO()
+            log_handler = logging.StreamHandler(log_capture)
+            logger.addHandler(log_handler)
+
+            num_chunks = process_documents(uploaded_files)
+
+            logger.removeHandler(log_handler)
+            log_contents = log_capture.getvalue()
+
+            if num_chunks > 0:
+                st.session_state.processing_result = f'<div class="stAlert success">Processed {num_chunks} chunks from {len(uploaded_files)} documents</div>'
+                st.session_state.chat_enabled = True
+            else:
+                st.session_state.processing_result = '<div class="stAlert info fade-out">No new documents to process.</div>'
+
+            if st.session_state.debug_mode:
+                st.session_state.processing_logs = log_contents
+            st.session_state.chat_enabled = True
+        except Exception as e:
+            logger.error(f"Error processing documents: {str(e)}")
+            st.session_state.processing_result = f'<div class="stAlert error">Error processing documents: {str(e)}</div>'
+            st.session_state.chat_enabled = False
+
+def chat_interface():
+    st.subheader("Chat Interface")
+
+    if st.session_state.chat_enabled or not st.session_state.use_rag:
+        # Display chat messages
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Chat input
+        if prompt := st.chat_input("What is your question?"):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
+                model_handler = ModelHandler(config)
+                model_choice = st.session_state.model_choice
+
+                if st.session_state.use_rag:
+                    context = retrieve_context(prompt)
+                    system_prompt = get_system_prompt()
+                    full_prompt = f"{system_prompt}\n\nContext: {context}\n\nHuman: {prompt}\n\nAssistant:"
+                else:
+                    full_prompt = prompt
+
+                if st.session_state.debug_mode:
+                    with st.expander("LLM Prompt"):
+                        st.code(full_prompt)
+
+                try:
+                    for response in model_handler.generate_stream(full_prompt, model_choice=model_choice):
+                        full_response += response
+                        message_placeholder.markdown(full_response + "▌")
+                    message_placeholder.markdown(full_response)
+                except Exception as e:
+                    logger.error(f"Error generating response: {str(e)}")
+                    st.error(f"Error generating response: {str(e)}")
+                    full_response = "I apologize, but I encountered an error while generating the response."
+
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+    elif not st.session_state.use_rag:
+        st.info("RAG is disabled. You can start chatting without document context.")
+    else:
+        st.info("Please process documents or disable RAG to start chatting.")
+
+def get_system_prompt():
+    return """You are a helpful AI assistant. Your task is to answer questions based solely on the provided context.
+    If the context doesn't contain enough information to answer the question, say so.
+    Do not use any external knowledge or make assumptions beyond what's given in the context.
+    If asked about your capabilities or identity, refer only to being an AI assistant without mentioning specific models or companies."""
+
+def handle_chat_input():
+    if prompt := st.chat_input("What is your question?"):
+        system_prompt = get_system_prompt()
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            model_handler = ModelHandler(config)
+            model_choice = st.session_state.model_choice
+            message_placeholder = st.empty()
+            full_response = ""
+
+            if st.session_state.use_rag:
+                context = retrieve_context(prompt)
+                system_prompt = get_system_prompt()
+                full_prompt = f"{system_prompt}\n\nContext: {context}\n\nHuman: {prompt}\n\nAssistant:"
+            else:
+                full_prompt = prompt
+
+            if st.session_state.debug_mode:
+                with st.expander("LLM Prompt"):
+                    st.code(full_prompt)
+
+            try:
+                for response in model_handler.generate_stream(full_prompt, model_choice=model_choice):
+                    full_response += response
+                    message_placeholder.markdown(full_response + "▌")
+                message_placeholder.markdown(full_response)
+            except Exception as e:
+                logger.error(f"Error generating response: {str(e)}")
+                st.error(f"Error generating response: {str(e)}")
+                full_response = "I apologize, but I encountered an error while generating the response."
+
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+def get_rag_context(prompt):
+    try:
+        context = retrieve_context(prompt, top_k=config['top_k'])
+        if st.session_state.debug_mode:
+            logger.info(f"RAG Context: {context}")
+            with st.expander("RAG Debug Information"):
+                st.write("RAG Context:")
+                st.code(context)
+        return context
+    except Exception as e:
+        logger.error(f"Error retrieving context: {str(e)}")
+        st.error(f"Error retrieving context: {str(e)}")
+        return ""
+
+def get_base64_of_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode('utf-8')
+
+if __name__ == "__main__":
+    main()
