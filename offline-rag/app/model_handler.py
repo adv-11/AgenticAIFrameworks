@@ -18,8 +18,8 @@ class ModelHandler:
         self.available_models = []
         model_paths = {
             "Llama 3": self.config.get('llama_model_path'),
-            "Mistral": self.config.get('mistral_model_path'),
-            "Gemma": self.config.get('gemma_model_path')
+            # "Mistral": self.config.get('mistral_model_path'),
+            # "Gemma": self.config.get('gemma_model_path')
         }
         for model_name, path in model_paths.items():
             if path and os.path.exists(path):
