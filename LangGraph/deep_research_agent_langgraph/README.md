@@ -12,6 +12,8 @@ Full System
 
 Scoping
 
+coverse with user ( can be back and forth ) -> gather context -> research breif ( to ground and steer the research process)
+
 - ![alt text](images/image-2.png)
 
 Research
