@@ -89,3 +89,19 @@ def write_research_brief(state: AgentState):
         "supervisor_messages": [HumanMessage(content=f"{response.research_brief}.")]
     }
 
+# graph construction
+
+deep_research_builder = StateGraph (AgentState, input_schema = AgentInputState)
+
+#nodes 
+
+deep_research_builder.add_node ("clarify_with_user", clarify_with_user )
+deep_research_builder.add_node ("write_research_brief", write_research_brief )
+
+#edges
+
+deep_research_builder.add_edge (START, "clarify_with_user")
+deep_research_builder.add_edge  ("write_research_brief", END)
+
+# compile
+scope_research = deep_research_builder.compile()
