@@ -50,3 +50,19 @@ def clarify_with_user (state: AgentState) -> Command[Literal["write_research_bri
             messages = get_buffer_string(messages = state["messages"]),
             date = get_today_str()
             ) ) ])
+
+    
+    if response.need_clarification:
+
+        return Command(
+            goto=START,
+            update = { "messages": [AIMessage (content=response.question)] }
+        )
+
+    else: 
+        return Command(
+            goto="write_research_brief",
+            update = { "messages": [AIMessage (content=response.verification)] }
+        )
+
+
