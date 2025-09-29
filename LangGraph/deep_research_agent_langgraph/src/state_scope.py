@@ -61,10 +61,3 @@ class ClarifyWithUser (BaseModel):
         "", description="Verification message if no clarification is needed."
     )
 
-
-class ResearchQuestion (BaseModel):
-    
-      research_brief: str = Field(
-        description="A research question that will be used to guide the research.",
-    )
-

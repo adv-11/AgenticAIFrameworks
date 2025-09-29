@@ -66,3 +66,26 @@ def clarify_with_user (state: AgentState) -> Command[Literal["write_research_bri
         )
 
 
+def write_research_brief(state: AgentState):
+    """
+    Transform the conversation history into a comprehensive research brief.
+    
+    """
+    
+    structured_output_model = model.with_structured_output(ResearchQuestion)
+    
+    #  research brief from conversation history
+    response = structured_output_model.invoke([
+        HumanMessage(content=transform_messages_into_research_topic_prompt.format(
+            messages=get_buffer_string(state.get("messages", [])),
+            date=get_today_str()
+        ))
+    ])
+    
+    # pass to supervisor
+    
+    return {
+        "research_brief": response.research_brief,
+        "supervisor_messages": [HumanMessage(content=f"{response.research_brief}.")]
+    }
+
