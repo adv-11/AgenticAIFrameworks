@@ -91,17 +91,17 @@ def write_research_brief(state: AgentState):
 
 # graph construction
 
-deep_research_builder = StateGraph (AgentState, input_schema = AgentInputState)
+deep_researcher_builder = StateGraph (AgentState, input_schema = AgentInputState)
 
 #nodes 
 
-deep_research_builder.add_node ("clarify_with_user", clarify_with_user )
-deep_research_builder.add_node ("write_research_brief", write_research_brief )
+deep_researcher_builder.add_node ("clarify_with_user", clarify_with_user )
+deep_researcher_builder.add_node ("write_research_brief", write_research_brief )
 
 #edges
 
-deep_research_builder.add_edge (START, "clarify_with_user")
-deep_research_builder.add_edge  ("write_research_brief", END)
+deep_researcher_builder.add_edge (START, "clarify_with_user")
+deep_researcher_builder.add_edge  ("write_research_brief", END)
 
 # compile
-scope_research = deep_research_builder.compile()
+scope_research = deep_researcher_builder.compile()
