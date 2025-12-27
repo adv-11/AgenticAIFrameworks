@@ -30,6 +30,9 @@ if 'gmail_service' not in st.session_state:
 if 'service_initialized' not in st.session_state:
     st.session_state.service_initialized = False
 
+if 'conversation_history' not in st.session_state:
+    st.session_state.conversation_history = []
+
 
 def initialize_gmail_service():
     """Initialize Gmail service"""
@@ -62,6 +65,15 @@ def save_uploaded_files(uploaded_files):
 
 
 def main():
+    
+    # Debug: Print session state info
+    print(f"\n{'='*80}")
+    print(f" STREAMLIT SESSION STATE DEBUG")
+    print(f"   Messages count: {len(st.session_state.messages)}")
+    print(f"   Conversation history count: {len(st.session_state.conversation_history)}")
+    print(f"   Service initialized: {st.session_state.service_initialized}")
+    print(f"{'='*80}\n")
+    
     # Header
     st.title("🎓 Course Assistant Chatbot")
     st.markdown(f"### {COURSE_INFO['course_code']} - {COURSE_INFO['course_name']}")
@@ -70,25 +82,25 @@ def main():
     
     # Sidebar with course info
     with st.sidebar:
-        st.header("📚 Quick Course Info")
+        st.header(" Course Info")
         
-        with st.expander("🕐 Schedule", expanded=False):
+        with st.expander(" Schedule", expanded=False):
             st.write(f"**Lectures:** {COURSE_INFO['schedule']['lecture_times']}")
             st.write(f"**Location:** {COURSE_INFO['schedule']['location']}")
             st.write(f"**Lab:** {COURSE_INFO['schedule']['lab_sessions']}")
         
-        with st.expander("📅 Important Dates", expanded=False):
+        with st.expander(" Important Dates", expanded=False):
             for date_name, date_value in COURSE_INFO['important_dates'].items():
                 st.write(f"**{date_name.replace('_', ' ').title()}:** {date_value}")
         
-        with st.expander("👨‍🏫 Office Hours", expanded=False):
+        with st.expander(" Office Hours", expanded=False):
             st.write(f"**Location:** {COURSE_INFO['professor']['office']}")
             st.write(f"**Hours:** {COURSE_INFO['professor']['office_hours']}")
         
         st.divider()
         
         # Gmail service status
-        st.header("📧 Email Service")
+        st.header(" Email Service")
         if not st.session_state.service_initialized:
             if st.button("Initialize Email Service", type="primary"):
                 with st.spinner("Initializing Gmail service..."):
@@ -109,6 +121,7 @@ def main():
         
         if st.button("🗑️ Clear Chat History"):
             st.session_state.messages = []
+            st.session_state.conversation_history = []
             st.rerun()
     
     # Main chat interface
@@ -130,10 +143,13 @@ def main():
     
     # Display uploaded files
     if uploaded_files:
-        st.info(f"📎 {len(uploaded_files)} file(s) ready to attach: {', '.join([f.name for f in uploaded_files])}")
+        st.info(f" {len(uploaded_files)} file(s) ready to attach: {', '.join([f.name for f in uploaded_files])}")
     
     # Chat input
     if prompt := st.chat_input("Type your question here..."):
+        print(f"\n NEW MESSAGE RECEIVED: {prompt}")
+        print(f" Current conversation history before adding: {len(st.session_state.conversation_history)} messages")
+        
         # Add user message to chat
         file_names = [f.name for f in uploaded_files] if uploaded_files else []
         st.session_state.messages.append({
@@ -146,7 +162,7 @@ def main():
         with st.chat_message("user"):
             st.markdown(prompt)
             if file_names:
-                st.caption(f"📎 Attached: {', '.join(file_names)}")
+                st.caption(f" Attached: {', '.join(file_names)}")
         
         # Get agent response
         with st.chat_message("assistant"):
@@ -166,8 +182,25 @@ def main():
                                 set_gmail_service(service)
                                 st.session_state.service_initialized = True
                     
-                    # Run agent
-                    response = run_agent(prompt, temp_file_paths)
+                    print(f" Calling run_agent with history of {len(st.session_state.conversation_history)} messages")
+                    
+                    # Run agent with conversation history
+                    try:
+                        response = run_agent(
+                            prompt, 
+                            temp_file_paths,
+                            conversation_history=st.session_state.conversation_history
+                        )
+                        print(f" Got response: {response[:100]}...")
+                    except Exception as agent_error:
+                        print(f"⚠️ Agent error (checking if email was sent): {agent_error}")
+                        # Check if it's the tool message error but email was actually sent
+                        error_str = str(agent_error)
+                        if "tool" in error_str.lower() and "Email successfully sent" in str(agent_error):
+                            response = "✅ Email successfully sent to Professor "
+                            print("✅ Recovered: Email was sent successfully despite error")
+                        else:
+                            raise  # Re-raise if it's a different error
                     
                     # Clean up temp files
                     if temp_file_paths:
@@ -179,6 +212,22 @@ def main():
                     
                     st.markdown(response)
                     
+                    # Show success notification if email was sent
+                    if "✅ Email successfully sent" in response:
+                        st.success("📧 Email has been sent to the professor!", icon="✅")
+                    
+                    # Add to conversation history AFTER getting response
+                    st.session_state.conversation_history.append({
+                        "role": "user",
+                        "content": prompt
+                    })
+                    st.session_state.conversation_history.append({
+                        "role": "assistant",
+                        "content": response
+                    })
+                    
+                    print(f" Conversation history after adding: {len(st.session_state.conversation_history)} messages")
+                    
                     # Add assistant response to chat
                     st.session_state.messages.append({
                         "role": "assistant",
@@ -188,6 +237,7 @@ def main():
                 except Exception as e:
                     error_msg = f"❌ Error: {str(e)}"
                     st.error(error_msg)
+                    print(f"❌ ERROR: {e}")
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": error_msg
@@ -196,14 +246,7 @@ def main():
     # Welcome message if no messages
     if not st.session_state.messages:
         st.info("""
-        👋 **Welcome!** I'm your course assistant. I can help you with:
         
-        - 📅 Course schedule and important dates
-        - 📝 Assignment details and deadlines  
-        - 📊 Grading policies and breakdown
-        - 👨‍🏫 Professor information and office hours
-        - 📚 Course topics and prerequisites
-        - 📧 Send questions to the professor (with attachments!)
         
         **Try asking:**
         - "When is the final exam?"
@@ -216,7 +259,7 @@ def main():
 if __name__ == "__main__":
     # Check for OpenAI API key
     if not os.getenv("OPENAI_API_KEY"):
-        st.error("⚠️ OPENAI_API_KEY not found in environment variables. Please add it to your .env file.")
+        st.error(" OPENAI_API_KEY not found in environment variables. Please add it to your .env file.")
         st.stop()
     
     main()
